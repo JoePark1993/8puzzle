@@ -1,0 +1,242 @@
+import copy
+
+goal_state = [1, 2, 3, 4, 5, 6, 7, 8, 0]  #goal state to achieve
+visited_states = [[0,0,0,0,0,0,0,0,0]]  # track of states
+class Node:
+    def __init__(self):
+        self.state = []     #each nodes state it holds
+        self.blank = 0      #place of blank for movement
+        self.OPERATOR = []
+        self.index = 0
+        self.g = 0          #number of moves g(n)
+        self.h1 = 0          #heuristic manhattan
+        self.h2 = 0          #misplaced tile
+        self.previous = 12
+    def __call__(self):
+        if(self.blank == 0):                    #corner case conditions first
+            self.OPERATOR = [2, 6]
+        elif(self.blank == 2):
+            self.OPERATOR = [4, 2]
+        return self
+    def Set_Blank(self,newblank):
+        self.blank = newblank
+        if (self.blank == 0):  # corner case conditions first
+            self.OPERATOR = [2, 6]
+        elif (self.blank == 1):
+            self.OPERATOR = [2, 4, 6]
+        elif (self.blank == 2):
+            self.OPERATOR = [2, 4]
+        elif (self.blank == 3):
+            self.OPERATOR = [8, 2, 6]
+        elif (self.blank == 4):
+            self.OPERATOR = [8, 2, 4, 6]
+        elif (self.blank == 5):
+            self.OPERATOR = [8, 2, 4]
+        elif (self.blank == 6):
+            self.OPERATOR = [8, 6]
+        elif (self.blank == 7):
+            self.OPERATOR = [8, 4, 6]
+        elif (self.blank == 8):
+            self.OPERATOR = [8, 4]
+        elif (self.blank % len(self.state) == 0):  # directions are ordered by numpad keys. ex) 4 = left, 6 = right
+            self.OPERATOR = [8, 2, 6]
+        elif (self.blank % len(self.state) == 1):  # boundary check
+            self.OPERATOR = [8, 2, 4]
+        elif (self.blank < 3 and self.blank != 0):  # PROBLEM HERE
+            self.OPERATOR = [2, 4, 6]
+        elif (self.blank > len(self.state) - 3):
+            self.OPERATOR = [8, 4, 6]
+        else:
+            self.OPERATOR = [8, 2, 4, 6]
+        return self
+    def Set_Previous(self,previous):
+        self.previous = previous
+    def Check_Previous(self, previous):
+        a = 12
+        for i in range(0,len(self.OPERATOR)):
+            if self.OPERATOR[i] == previous:
+                a = self.OPERATOR.index(self.OPERATOR[i])
+        if(a < 9):
+            del self.OPERATOR[a]
+        else:
+            return
+    def Add_G(self):
+        self.g += 1
+    def Add_Man_Heuristic(self):
+        self.h1 = 0
+        for i in range(0,len(self.state)):
+            if self.state[i] == 0:
+                continue
+            elif self.state.index(self.state[i]) != self.state[i] - 1:
+                initrow = int((self.state[i] - 1) % 3)
+                initcol = int((self.state[i] - 1) / 3)
+                row = int(self.state.index(self.state[i]) % 3)
+                col = int(self.state.index(self.state[i]) / 3)
+                self.h1 += abs(initrow - row) + abs(initcol - col)
+
+    def Add_Mis_Heuristic(self):
+        self.h2 = 0
+        for i in range(0,len(self.state)):
+            if self.state[i] == 0:
+                continue
+            elif self.state.index(self.state[i]) != self.state[i] - 1:
+                self.h2 += 1
+    def GOAL_TEST(self,node):
+        if node.state == goal_state:                        #compare current node state to goal
+            return True
+        else:
+            return False
+
+
+def general_search(problem,QUEUEING_FUNCTION,REMOVE_FRONT):
+    found = False
+    nodes = MAKE_QUEUE(MAKE_NODE(problem))
+    expanded_nodes = 0
+    while not found:
+        if EMPTY(nodes):
+            return print("failure")
+        node = REMOVE_FRONT(nodes)
+        if problem.GOAL_TEST(node):
+            found = True
+            return print("Success", node.state)
+        node.Check_Previous(node.previous)
+        nodes = QUEUEING_FUNCTION(nodes, node, EXPAND(node, node.OPERATOR))
+        expanded_nodes += 1
+        for j in range(0,len(nodes)):
+            print("pushed nodes: ", nodes[j].state, "This nodes g(n): ", nodes[j].g, "This nodes h(n): ", nodes[j].h1)
+
+
+def REMOVE_FRONT(nodes):
+    node = nodes[0]
+    tempg = nodes[0].g
+    index = 0
+    for n in range(len(nodes)):
+        if nodes[n].g < tempg:
+            node = nodes[n]
+            index = n
+            node.index = index
+    nodes.pop(index)
+    return node
+
+def REMOVE_FRONT_MAN(nodes):       #Manhattan dequeue
+    node = nodes[0]
+    tempg = nodes[0].g
+    index = 0
+    for n in range(len(nodes)):
+        if (nodes[n].h1 + nodes[n].g) < tempg:
+            node = nodes[n]
+            index = n
+            node.index = index
+    nodes.pop(index)
+    return node
+
+def REMOVE_FRONT_MIS(nodes):       #Misplaced Tile dequeue
+    node = nodes[0]
+    tempg = nodes[0].g
+    index = 0
+    for n in range(len(nodes)):
+        if (nodes[n].h2 + nodes[n].g) < tempg:
+            node = nodes[n]
+            index = n
+            node.index = index
+    nodes.pop(index)
+    return node
+
+def EMPTY(nodes):
+    if len(nodes) == 0:
+        return True
+    else:
+        return False
+
+
+def MAKE_NODE(problem):
+    retNode = Node()
+    retNode.state = problem.state
+    retNode.blank = problem.blank
+    return retNode
+
+
+def MAKE_QUEUE(MAKE_NODE):
+    nodeQueue = []
+    nodeQueue.append(MAKE_NODE())
+    return nodeQueue
+
+
+def QUEUEING_FUNCTION(nodes, node, EXPAND):
+    tempList = EXPAND
+    for i in range(len(tempList)):
+        visited_states.append(tempList[i].state)
+    index = node.index
+    for i in range(len(tempList)):
+        nodes.insert(index, tempList[i])
+        index += 1
+
+    return nodes
+
+def EXPAND(node,operators):
+    nodes = []
+    saveNode = copy.deepcopy(node)
+    for i in range(0, len(operators)):                           #for loop of list of OPERATORS string and create new nodes and states for each
+        tempNode = copy.deepcopy(saveNode)                       # don't manipulate the passed in node. Temp node to append to nodes list
+        if operators[i] == 8:                                    #swaping blank space with piece of interest
+            a, b = tempNode.state.index(0),  tempNode.state.index(tempNode.state[tempNode.blank - 3])
+            tempNode.state[b], tempNode.state[a] = tempNode.state[a], tempNode.state[b]
+            tempNode.Set_Previous(2)
+            tempNode.Set_Blank(tempNode.blank - 3)
+            tempNode.Add_G()
+            tempNode.Add_Man_Heuristic()
+            tempNode.Add_Mis_Heuristic()
+            nodes.append(tempNode)
+            print("up")
+        elif operators[i] == 2:
+            a, b = tempNode.state.index(0),  tempNode.state.index(tempNode.state[tempNode.blank + 3])
+            tempNode.state[b], tempNode.state[a] = tempNode.state[a], tempNode.state[b]
+            tempNode.Set_Blank(tempNode.blank + 3)
+            tempNode.Set_Previous(8)
+            tempNode.Add_G()
+            tempNode.Add_Man_Heuristic()
+            tempNode.Add_Mis_Heuristic()
+            nodes.append(tempNode)
+            print("down")
+        elif operators[i] == 4:
+            a, b = tempNode.state.index(0),  tempNode.state.index(tempNode.state[tempNode.blank - 1])
+            tempNode.state[b], tempNode.state[a] = tempNode.state[a], tempNode.state[b]
+            tempNode.Set_Blank(tempNode.blank - 1)
+            tempNode.Set_Previous(6)
+            tempNode.Add_G()
+            tempNode.Add_Man_Heuristic()
+            tempNode.Add_Mis_Heuristic()
+            nodes.append(tempNode)
+            print("left")
+        elif operators[i] == 6:
+            a, b = tempNode.state.index(0),  tempNode.state.index(tempNode.state[tempNode.blank + 1])
+            tempNode.state[b], tempNode.state[a] = tempNode.state[a], tempNode.state[b]
+            tempNode.Set_Blank(tempNode.blank + 1)
+            tempNode.Set_Previous(4)
+            tempNode.Add_G()
+            tempNode.Add_Man_Heuristic()
+            tempNode.Add_Mis_Heuristic()
+            nodes.append(tempNode)
+            print("right")
+    newNodes = []
+    for i in range(len(nodes)):
+        exists = True
+        for j in range(len(visited_states)):
+            if nodes[i].state == goal_state:
+                break
+            elif nodes[i].state == visited_states[j]:
+                exists = False
+        if exists:
+            newNodes.append(nodes[i])
+    return newNodes
+
+def main():
+    a = Node()
+    a.state = [0,1,2,4,5,3,7,8,6]
+    a.blank = 0
+    general_search(a, QUEUEING_FUNCTION, REMOVE_FRONT)
+
+
+main()
+
+
