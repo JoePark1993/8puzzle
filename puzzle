@@ -14,37 +14,41 @@ class Node:
         self.previous = 12
     def __call__(self):
         if(self.blank == 0):                    #corner case conditions first
-            self.OPERATOR = [2, 6]
-        elif(self.blank == 2):
+            self.OPERATOR = [2, 6]              #NOTE: All this can be easily adaptable for larger array if given matrix dimensions
+        elif(self.blank == 2):                  # for this project, we use dimension 3 so it is calculated accordingly
             self.OPERATOR = [4, 2]
+        elif(self.blank == 6):
+            self.OPERATOR = [8, 6]
+        elif(self.blank == 8):
+            self.OPERATOR = [8, 4]
+        elif(self.blank % 3 == 2):
+            self.OPERATOR = [8, 2, 4]
+        elif(self.blank % 3 == 0):
+            self.OPERATOR = [8, 2, 6]
+        elif(self.blank < 3):
+            self.OPERATOR =[2, 4, 6]
+        elif(self.blank > 5):
+            self.OPERATOR = [8, 4, 6]
+        else:
+            self.OPERATOR = [8, 2, 4, 6]
         return self
     def Set_Blank(self,newblank):
         self.blank = newblank
-        if (self.blank == 0):  # corner case conditions first
-            self.OPERATOR = [2, 6]
-        elif (self.blank == 1):
-            self.OPERATOR = [2, 4, 6]
+        if (self.blank == 0):               # corner case conditions first
+            self.OPERATOR = [2, 6]          # NOTE: This can be easily adaptable for larger array if given matrix dimensions
         elif (self.blank == 2):
-            self.OPERATOR = [2, 4]
-        elif (self.blank == 3):
-            self.OPERATOR = [8, 2, 6]
-        elif (self.blank == 4):
-            self.OPERATOR = [8, 2, 4, 6]
-        elif (self.blank == 5):
-            self.OPERATOR = [8, 2, 4]
+            self.OPERATOR = [4, 2]
         elif (self.blank == 6):
             self.OPERATOR = [8, 6]
-        elif (self.blank == 7):
-            self.OPERATOR = [8, 4, 6]
         elif (self.blank == 8):
             self.OPERATOR = [8, 4]
-        elif (self.blank % len(self.state) == 0):  # directions are ordered by numpad keys. ex) 4 = left, 6 = right
-            self.OPERATOR = [8, 2, 6]
-        elif (self.blank % len(self.state) == 1):  # boundary check
+        elif (self.blank % 3 == 2):
             self.OPERATOR = [8, 2, 4]
-        elif (self.blank < 3 and self.blank != 0):  # PROBLEM HERE
+        elif (self.blank % 3 == 0):
+            self.OPERATOR = [8, 2, 6]
+        elif (self.blank < 3):
             self.OPERATOR = [2, 4, 6]
-        elif (self.blank > len(self.state) - 3):
+        elif (self.blank > 5):
             self.OPERATOR = [8, 4, 6]
         else:
             self.OPERATOR = [8, 2, 4, 6]
@@ -89,22 +93,22 @@ class Node:
 
 
 def general_search(problem,QUEUEING_FUNCTION,REMOVE_FRONT):
-    found = False
     nodes = MAKE_QUEUE(MAKE_NODE(problem))
     expanded_nodes = 0
-    while not found:
+    total_expanded = 0
+    maximum_queue = 0
+    while True:
         if EMPTY(nodes):
             return print("failure")
         node = REMOVE_FRONT(nodes)
         if problem.GOAL_TEST(node):
-            found = True
+            print("To solve this problem, the search algorithm expanded a total of ", total_expanded ,"nodes")
+            print("The maximum number of nodes in the queue at any one time was", maximum_queue )
+            print("The depth of the goal node was ", node.g)
             return print("Success", node.state)
         node.Check_Previous(node.previous)
-        nodes = QUEUEING_FUNCTION(nodes, node, EXPAND(node, node.OPERATOR))
-        expanded_nodes += 1
-        for j in range(0,len(nodes)):
-            print("pushed nodes: ", nodes[j].state, "This nodes g(n): ", nodes[j].g, "This nodes h(n): ", nodes[j].h1)
-
+        nodes,expanded_nodes, maximum_queue = QUEUEING_FUNCTION(nodes, node, EXPAND(node, node.OPERATOR, expanded_nodes),maximum_queue)
+        total_expanded += expanded_nodes
 
 def REMOVE_FRONT(nodes):
     node = nodes[0]
@@ -115,30 +119,54 @@ def REMOVE_FRONT(nodes):
             node = nodes[n]
             index = n
             node.index = index
+    if nodes[index].state != goal_state:
+        print("Best state to expand is with g(n) = ", nodes[index].g, " and h(n) = 0 (UNIFORM COST)")
+        for i in range(len(nodes[index].state)):
+            if i % 3 == 2:
+                print(nodes[index].state[i], "")
+            else:
+                print(nodes[index].state[i], " ", end = '')
+        print("Expanding this node...")
     nodes.pop(index)
     return node
 
 def REMOVE_FRONT_MAN(nodes):       #Manhattan dequeue
     node = nodes[0]
-    tempg = nodes[0].g
+    tempg = nodes[0].g + nodes[0].h1
     index = 0
     for n in range(len(nodes)):
         if (nodes[n].h1 + nodes[n].g) < tempg:
             node = nodes[n]
             index = n
             node.index = index
+    if nodes[index].state != goal_state:
+        print("Best state to expand is with g(n) = ", nodes[index].g, " and h(n) = ", nodes[index].h1)
+        for i in range(len(nodes[index].state)):
+            if i % 3 == 2:
+                print(nodes[index].state[i], "")
+            else:
+                print(nodes[index].state[i], " ", end = '')
+        print("Expanding this node...")
     nodes.pop(index)
     return node
 
 def REMOVE_FRONT_MIS(nodes):       #Misplaced Tile dequeue
     node = nodes[0]
-    tempg = nodes[0].g
+    tempg = nodes[0].g + nodes[0].h2
     index = 0
     for n in range(len(nodes)):
         if (nodes[n].h2 + nodes[n].g) < tempg:
             node = nodes[n]
             index = n
             node.index = index
+    if nodes[index].state != goal_state:
+        print("Best state to expand is with g(n) = ", nodes[index].g, " and h(n) = ", nodes[index].h2)
+        for i in range(len(nodes[index].state)):
+            if i % 3 == 2:
+                print(nodes[index].state[i], "")
+            else:
+                print(nodes[index].state[i], " ", end = '')
+        print("Expanding this node...")
     nodes.pop(index)
     return node
 
@@ -162,23 +190,25 @@ def MAKE_QUEUE(MAKE_NODE):
     return nodeQueue
 
 
-def QUEUEING_FUNCTION(nodes, node, EXPAND):
-    tempList = EXPAND
+def QUEUEING_FUNCTION(nodes, node, EXPAND, maximum_queue):
+    tempList, expanded_nodes = EXPAND
     for i in range(len(tempList)):
         visited_states.append(tempList[i].state)
     index = node.index
     for i in range(len(tempList)):
         nodes.insert(index, tempList[i])
         index += 1
+    if len(nodes) > maximum_queue:
+        maximum_queue = len(nodes)
+    return nodes,expanded_nodes, maximum_queue
 
-    return nodes
-
-def EXPAND(node,operators):
+def EXPAND(node,operators,expanded_nodes):
     nodes = []
     saveNode = copy.deepcopy(node)
     for i in range(0, len(operators)):                           #for loop of list of OPERATORS string and create new nodes and states for each
         tempNode = copy.deepcopy(saveNode)                       # don't manipulate the passed in node. Temp node to append to nodes list
         if operators[i] == 8:                                    #swaping blank space with piece of interest
+            expanded_nodes += 1
             a, b = tempNode.state.index(0),  tempNode.state.index(tempNode.state[tempNode.blank - 3])
             tempNode.state[b], tempNode.state[a] = tempNode.state[a], tempNode.state[b]
             tempNode.Set_Previous(2)
@@ -187,8 +217,8 @@ def EXPAND(node,operators):
             tempNode.Add_Man_Heuristic()
             tempNode.Add_Mis_Heuristic()
             nodes.append(tempNode)
-            print("up")
         elif operators[i] == 2:
+            expanded_nodes += 1
             a, b = tempNode.state.index(0),  tempNode.state.index(tempNode.state[tempNode.blank + 3])
             tempNode.state[b], tempNode.state[a] = tempNode.state[a], tempNode.state[b]
             tempNode.Set_Blank(tempNode.blank + 3)
@@ -197,8 +227,8 @@ def EXPAND(node,operators):
             tempNode.Add_Man_Heuristic()
             tempNode.Add_Mis_Heuristic()
             nodes.append(tempNode)
-            print("down")
         elif operators[i] == 4:
+            expanded_nodes += 1
             a, b = tempNode.state.index(0),  tempNode.state.index(tempNode.state[tempNode.blank - 1])
             tempNode.state[b], tempNode.state[a] = tempNode.state[a], tempNode.state[b]
             tempNode.Set_Blank(tempNode.blank - 1)
@@ -207,8 +237,8 @@ def EXPAND(node,operators):
             tempNode.Add_Man_Heuristic()
             tempNode.Add_Mis_Heuristic()
             nodes.append(tempNode)
-            print("left")
         elif operators[i] == 6:
+            expanded_nodes += 1
             a, b = tempNode.state.index(0),  tempNode.state.index(tempNode.state[tempNode.blank + 1])
             tempNode.state[b], tempNode.state[a] = tempNode.state[a], tempNode.state[b]
             tempNode.Set_Blank(tempNode.blank + 1)
@@ -217,7 +247,6 @@ def EXPAND(node,operators):
             tempNode.Add_Man_Heuristic()
             tempNode.Add_Mis_Heuristic()
             nodes.append(tempNode)
-            print("right")
     newNodes = []
     for i in range(len(nodes)):
         exists = True
@@ -228,13 +257,42 @@ def EXPAND(node,operators):
                 exists = False
         if exists:
             newNodes.append(nodes[i])
-    return newNodes
+    return newNodes, expanded_nodes
 
 def main():
-    a = Node()
-    a.state = [0,1,2,4,5,3,7,8,6]
-    a.blank = 0
-    general_search(a, QUEUEING_FUNCTION, REMOVE_FRONT)
+    matrix = []
+    userNode = Node()
+    print("Welcome to Bertie Woosters 8-puzzle solver.")
+    type = input("Type '1' to use a default puzzle, or '2' to enter your own puzzle")
+    if type == '2':
+        print("Enter your puzzle, use zero to represent blank")
+        rowOne = input("Enter first row, use space or tabs between numbers \n")
+        matrix.extend(rowOne)
+        rowTwo = input("Enter second row, use space or tabs between numbers \n")
+        matrix.extend(rowTwo)
+        rowThree = input("Enter third row, use space or tabs between numbers \n")
+        matrix.extend(rowThree)
+        state = []
+        for i in range(len(matrix)):
+            if matrix[i] != ' ':
+                state.append(int(matrix[i]))
+        blank = state.index(0)
+        userNode.state = state
+        userNode.blank = blank
+    elif type == '1':
+        userNode.state = [0,1,2,4,5,3,7,8,6]
+        userNode.blank = 0
+    print("Enter your choice of algorithm:")
+    print("1. Uniform Cost Search")
+    print("2. A* with Misplaced Tile Heuristic")
+    choice = input("3. A* with Manhattan Distance Heuristic \n")
+    if(choice == '1'):
+        general_search(userNode, QUEUEING_FUNCTION, REMOVE_FRONT)
+    elif(choice == '2'):
+        general_search(userNode, QUEUEING_FUNCTION, REMOVE_FRONT_MIS)
+    else:
+        general_search(userNode, QUEUEING_FUNCTION, REMOVE_FRONT_MAN)
+
 
 
 main()
